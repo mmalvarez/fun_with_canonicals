@@ -24,25 +24,27 @@ Canonical Structure cons_tag P := singleton_tag P.
 Definition orl_valid (P : Prop) (Ps : tagged_propl) : Prop :=
   foldr_head or False Ps = P.
 
+(*
 Record orl_class (P : Prop) := (* should be Prop? *)
   OrlClass {
       list_of : tagged_propl;
       _ : untag (list_of) <> nil;
       _ : orl_valid P list_of}.
+*)
 
+(*
 Structure orl_type :=
   OrlPack {obj : Prop; class_of : orl_class obj}.
 
 Definition get_lst (e : orl_type) : tagged_propl :=
   let 'OrlPack _ (OrlClass lstof _ _) := e in lstof.
+*)
 
-Require Import Infrastructure.
-
-(*Structure orlist := Orlist { 
+Structure orlist := Orlist { 
          P : Prop;
          list_of : tagged_propl;
          _ : untag (list_of) <> nil;
-         _ : orl_valid P list_of }.*)
+         _ : orl_valid P list_of }.
 
 (*Arguments list_of {o}.*)
 
@@ -57,54 +59,53 @@ Proof.
 Qed.
 
 Canonical Structure singleton_orl (P : Prop) :=
-  [find 
-
-Canonical Structure singleton_orl (P : Prop) :=
   Orlist P (singleton_tag (cons P nil)) (singleton_nemp_proof P) (singleton_valid_proof P).
 
-(* need a dummy object that typechecks to it *)
-
-(*
-GIVEN a Prop
-
-- Get me something relating corresponding Props and list Prop
-- Project out the list Prop
-
-FINALLY have a list Prop
-*)
-
-Definition get_list {orl : orlist}
-           {Q : P orl} {Prp : P orl} {gg : P Q} : tagged_propl :=
+Definition check_list {orl : orlist} (Q : P orl) : tagged_propl :=
   list_of orl.
 
-Eval compute in (get_list True).
+Inductive phantom {T : Type} (t : T) : Type := Phantom.
+Definition unify {T1 T2} (t1 : T1) (t2 : T2) :=
+  phantom t1 -> phantom t2.
+
+Definition id {T : Type} {t : T} (x : phantom t) := x.    
+
+Definition get_list {orl : orlist}
+           (Q : Prop) (uni : unify Q (P orl)) :=
+  list_of orl.
 
 Lemma cons_nemp_proof :
-  forall (P1 P2 : Prop) (orl : orlist P2),
+  forall (P1 : Prop) (orl : orlist),
     (cons P1 (untag (list_of orl))) <> nil.
 intros. intro. inversion H.
 Qed.
 
-Lemma cons_valid_proof : forall (P1 P2 : Prop) (orl : orlist P2),
-                          orl_valid (P1 \/ P2) (cons_tag (cons P1 (list_of orl))).
+Lemma cons_valid_proof : forall (P1 : Prop) (orl : orlist),
+                          orl_valid (P1 \/ (P orl)) (cons_tag (cons P1 (list_of orl))).
 Proof.
 dependent inversion orl.
   simpl. unfold orl_valid in *.
   simpl.
   destruct (untag list_of0).
   + elimtype False. auto.
-  + simpl in o.
+  + simpl in *.
     destruct l.
-    * simpl. rewrite o. auto.
-    * simpl. rewrite o. auto.
+    * simpl. rewrite o. reflexivity.
+    * simpl. rewrite o. reflexivity.
 Qed.
+(*intro.
+    unfold unify in uni.
+    pose (uni (Phantom P1)).
+    destruct l.
+    * simpl in *. rewrite o. rewrite equ. auto.
+    * simpl. rewrite o. rewrite equ. auto.
+Qed.*)
  
-Canonical Structure cons_orl (P1 P2 : Prop) (orl : orlist P2) :=
-  Orlist (P1 \/ P2) (cons_tag (cons P1 (untag (list_of orl))))
-         (cons_nemp_proof P1 P2 orl) (cons_valid_proof P1 P2 orl).
+Canonical Structure cons_orl (P1 : Prop) (orl : orlist) :=
+  Orlist (P1 \/ (P orl)) (cons_tag (cons P1 (untag (list_of orl))))
+         (cons_nemp_proof P1 orl) (cons_valid_proof P1 orl).
 
-Definition get_list (P : Prop) {orl : orlist P} :=
-  list_of orl.
+Eval compute in (get_list (True \/ False) id).
 
 Eval compute in (@get_list True).
 

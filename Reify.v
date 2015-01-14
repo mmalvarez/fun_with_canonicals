@@ -17,9 +17,10 @@ Import Infrastructure.
     end.
 
   Structure tagged_ReiType := RTag {runtag :> ReiType}.
+
   Structure reifiable :=
     Reifiable {sort : Type;
-               rt_of :> ReiType;
+               rt_of :> tagged_ReiType;
                _ : sort = denote rt_of}.
   
   Definition nat_tag R := RTag R.
@@ -28,13 +29,13 @@ Import Infrastructure.
   Canonical Structure pair_tag R := unit_tag R.
 
   Canonical Structure rei_nat : reifiable :=
-    Reifiable nat RNat (eq_refl).
+    Reifiable nat (nat_tag RNat) (eq_refl).
 
   Canonical Structure rei_bool : reifiable :=
-    Reifiable bool RBool (eq_refl).
+    Reifiable bool (bool_tag RBool) (eq_refl).
 
-  Canonical Structure rei_unit : reifiable :=
-    Reifiable unit RUnit (eq_refl).
+  Canonical Structure rei_unit : reifiable  :=
+    Reifiable unit (unit_tag RUnit) (eq_refl).
 
   Lemma rei_pair_proof : forall (r1 r2: reifiable),
                            prod (sort r1) (sort r2) = denote (RPair r1 r2).
@@ -45,18 +46,46 @@ Import Infrastructure.
 
   Canonical Structure rei_pair (r1 r2 : reifiable) : reifiable :=
     Reifiable (prod (sort r1) (sort r2))
-              (RPair (rt_of r1) (rt_of r2))
+              (pair_tag (RPair (rt_of r1) (rt_of r2)))
               (rei_pair_proof r1 r2).
 
   (* concept of "matching" *)
+  Definition check_type
+             {reT : reifiable} (t : sort reT):=
+    rt_of reT.
 
-Require Import String.
+  Eval compute in (check_type (true, (1, tt))).
+
+  (* Constructs stolen from Infrastructure.v *)
   Inductive phantom {T : Type} (t : T) : Type := Phantom.
-  
-  (*Structure phantom {T : Type} :=
-    Phantom {item : T}.*)
+  Definition unify {T1 T2} (t1 : T1) (t2 : T2) :=
+    phantom t1 -> phantom t2.
 
-  Check (Phantom 3).
+  Structure unify2 {T1 T2} (t1 : T1) (t2 : T2) :=
+    Unify2 {f : phantom t1 -> phantom t2}.
+
+  Definition id {T : Type} {t : T} (x : phantom t) := x.    
+
+  Canonical Structure unify2_id {T1 : Type} (t1 : T1) :=
+    @Unify2 T1 T1 t1 t1 id.      
+
+  (*Canonical Structure unif_id_nat (T : Type) : @unify T T  :=
+    @Unify T T (@id T).*)
+
+  Check unify2.
+  Check unify2_id.
+
+  Definition get_type {reT : reifiable} (T : Type) (uni : unify T (sort reT)) :=
+    rt_of reT.
+
+  Notation "f ! x" := (f x id) (at level 99).
+
+  Eval compute in (get_type! nat).
+
+  Definition get_type {reT : reifiable} (T : Type) : ReiType :=
+    get_type' T id.
+
+  Eval compute in (get_type nat id).
 
  Structure unify {T1 T2 : Type} (t1 : T1) (t2 : T2) :=
     Unify {unif : phantom t1 -> phantom t2; err : option string}.
@@ -139,13 +168,11 @@ Require Import Infrastructure.
 
   Eval hnf in (reify_type bool).
 
-(*
   Definition get_type
              {reT :reifiable}
              (t  : (sort reT))
      {mat : matching } :=
     rt_of reT.
-*)
 
   (* something whose type has a *)
 
